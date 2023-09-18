@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prodavnica</title>
+    <script src="scripts/axios.min.js"></script>
+    <script src="scripts/vue.global.js"></script>
+    <link rel="stylesheet" href="styles/prodavnica.css">
+</head>
+<body>
+    <div id="app">
+        <div>
+            <header>
+                <h1 class="centriranje_naslova">Prodavnica sportske opreme</h1>
+                <nav>
+                    <a href="/logout" v-if="korisnik.pravo">Odjavi se</a>
+                    <a href="/admin" v-if="korisnik.pravo === 'admin'">Admin stranica</a>
+                    <a href="/registracija" v-if="!korisnik.pravo">Registruj se</a>
+                    <a href="/login" v-if="!korisnik.pravo">Prijavi se</a>
+                    <a href="/" @click="prikaziKorpu()">Moja korpa</a>
+                    <a href="/moje_kupovine" v-if="korisnik.pravo">Moje kupovine</a>
+                    <div v-if="korisnik.ime" class="sesija_korisnik">
+                        <span>{{ korisnik.ime }} {{ korisnik.prezime }} <span v-if="korisnik.pravo === 'admin'">- {{korisnik.pravo}}</span></span>
+                    </div>
+                    
+                    <label for=""> 
+                        <input type="text" placeholder="Pretrazi sajt" v-model="pretraga">
+                        <button class="dugme_pretrazi" @click="pretrazi()">Pretrazi</button>
+                        <button class="dugme_pretrazi" @click="ponistiPretragu()">Ponisti pretragu</button>
+                        <button class="dugme_pretrazi" @click="prikaziFiltere">{{ filteriVidljivi ? 'Sakrij filtere' : 'Napredna pretraga' }}</button>
+                    </label>
+
+                    <div class="dropdown" v-if="filteriVidljivi">
+                        <select v-model="izabranaKategorija">
+                            <option value="">kategorija</option>
+                            <option v-for="kategorija in kategorije" :value="kategorija.naziv">{{kategorija.naziv}}</option>
+                        </select>
+                    </div>
+
+                    <div class="dropdown" v-if="filteriVidljivi">
+                        <select v-model="izabraniBrend">
+                            <option value="">brend</option>
+                            <option v-for="brend in brendovi" :value="brend.naziv">{{brend.naziv}}</option>
+                        </select>
+                    </div>
+
+                    <div class="dropdown" v-if="filteriVidljivi">
+                        <select v-model="izabraniPol">
+                            <option value="">pol</option>
+                            <option v-for="pol in polovi" :value="pol.naziv">{{pol.naziv}}</option>
+                        </select>
+                    </div>
+                    <button @click="resetujFiltere()" class="reset_dugme" v-if="filteriVidljivi">Resetuj filtere</button>
+                </nav>
+            </header>
+        </div>  
+
+        <div class="div_proizvodi">
+            <ul>
+                <li v-for="(p, indeks) in dostupni_proizvodi" class="proizvod">
+                    <img :src="'slike/' + p.sifra + '.jpg'" alt="slika proizvoda" class="proizvod_slika">
+                    <div class="proizvod_opis">
+                        <p class="naziv">{{p.naziv}}</p>
+                        <ul>
+                            <li class="opis">Opis: {{p.opis}}</li>
+                            <li class="brend">Brend: {{p["brend.naziv"]}}</li>
+                            <li class="pol">Pol: {{p["pol.naziv"]}}</li>
+                            <li class="cena"> {{p.cena}} din</li>
+                            <button class="dodaj_u_korpu_dugme" @click="dodajUKorpu(p)">Dodaj u korpu</button>
+                        </ul>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <div v-if="korpa.length > 0 && !korpaMinimizovana" class="korpa">
+            <h3>Korpa</h3>
+            <ul>
+                <li v-for="(pr, indeks) in korpa">{{pr.naziv}}, kolicina: <input type="number" v-model="pr.kolicina" step="1"> <button @click="ukloniIzKorpe(indeks)">Ukloni iz korpe</button></li>
+            </ul>
+            <div>Ukupna cena: {{ ukupnaCena() }} din</div>
+            <div class="zavrsi_kupovinu_dugme">
+                <button @click="zavrsiKupovinu()">Zavrsi kupovinu</button>
+            </div>
+            <div class="minimizuj_korpu">
+                <button @click="minimizujKorpu()">
+                    {{ korpaMinimizovana ? 'Prikaži korpu' : 'Sakrij korpu' }}
+                </button>  
+            </div>            
+        </div>
+
+    </div>
+    <script>
+        Vue.createApp({
+            data(){
+                return {
+                    proizvodi: [],
+                    dostupni_proizvodi: [],
+                    korpa: [],
+                    korisnik: {},
+                    novaKupovina: {
+                        korisnik_id: undefined,
+                        proizvod_id: undefined,
+                        cena: undefined,
+                        datum: undefined,
+                        vreme: undefined,
+                        kolicina: undefined,
+                        alertPrikazan: false,
+                    },
+                    pretraga: "",
+                    korpaMinimizovana: false,
+                    brendovi:[],
+                    polovi:[],
+                    kategorije:[],
+                    izabranaKategorija: "",
+                    izabraniBrend: "",
+                    izabraniPol: "",
+                    filteriVidljivi: false,
+                }
+            },
+            watch: {
+                izabranaKategorija: "filtrirajProizvode",
+                izabraniBrend: "filtrirajProizvode",
+                izabraniPol: "filtrirajProizvode",
+            },
+            created(){
+                axios.get("/api/proizvodi").then(podaci => {
+                    this.proizvodi = podaci.data
+                });
+                axios.get("/api/dostupni_proizvodi").then(podaci => {
+                    this.dostupni_proizvodi = podaci.data
+                });
+                axios.get("/api/session_podaci").then(podaci => {
+                    this.korisnik = podaci.data;
+                });
+                const korpaIzStorage = localStorage.getItem('korpa');
+                if (korpaIzStorage) {
+                    this.korpa = JSON.parse(korpaIzStorage);
+                };
+                axios.get("/api/brendovi").then(podaci => {
+                    this.brendovi = podaci.data
+                });
+                axios.get("/api/polovi").then(podaci => {
+                    this.polovi = podaci.data
+                });
+                axios.get("/api/kategorije").then(podaci => {
+                    this.kategorije = podaci.data
+                })
+            },
+            methods: {
+                dodajUKorpu(proizvod){
+                    const postojeciProizvod = this.korpa.find((p) => p.id === proizvod.id);
+                    if (postojeciProizvod) {
+                        postojeciProizvod.kolicina += 1;
+                    } else {
+                        const cenaProizvoda = this.dostupni_proizvodi.find((p) => p.id === proizvod.id)?.cena;
+                        if (cenaProizvoda) {
+                            this.korpa.push({
+                                id: proizvod.id,
+                                naziv: proizvod.naziv,
+                                cena: cenaProizvoda, 
+                                kolicina: 1, 
+                            });
+                        }
+                    }
+                    localStorage.setItem('korpa', JSON.stringify(this.korpa));
+                },
+                ukloniIzKorpe(indeks){
+                    this.korpa.splice(indeks, 1);
+                    localStorage.setItem('korpa', JSON.stringify(this.korpa));
+                },
+                ukupnaCena(){
+                    let suma = 0;
+                    this.korpa.forEach((proizvod) => {
+                        suma += proizvod.cena * proizvod.kolicina;
+                    });
+                    return suma;
+                },
+                zavrsiKupovinu(){
+                    if(!this.korisnik.pravo){
+                        alert("Morate biti ulogovani, kako bi zavrsili kupovinu");
+                        return;
+                    }
+                    if (!this.alertPrikazan) {
+                        const kupovine = this.korpa.filter((proizvod) => proizvod.kolicina > 0)
+                        .map((proizvod) => ({
+                            korisnik_id: this.korisnik.id,
+                            proizvod_id: proizvod.id,
+                            cena: proizvod.cena * proizvod.kolicina,
+                            datum: this.formatirajDatum(new Date()),
+                            vreme: this.formatirajVreme(new Date()),
+                            kolicina: proizvod.kolicina,
+                        }));
+
+                        kupovine.forEach((kupovina) => {
+                            axios.post('/api/kupovine', kupovina).then(() => {
+                                if (!this.alertPrikazan) {
+                                    alert('Kupovina uspešno završena!');
+                                    this.alertPrikazan = true;
+                                }
+                            }).catch((error) => {
+                                alert('Doslo je do greske tokom kupovine. Pokusajte ponovo.');
+                            })
+                        });
+                    }
+
+                    this.korpa = [];
+                    localStorage.removeItem('korpa');
+                } ,
+                formatirajDatum(datum) {
+                    const dan = datum.getDate().toString().padStart(2, '0');
+                    const mesec = (datum.getMonth() + 1).toString().padStart(2, '0');
+                    const godina = datum.getFullYear();
+                    return `${dan}-${mesec}-${godina}`;
+                },
+                formatirajVreme(datum) {
+                    const sati = datum.getHours().toString().padStart(2, '0');
+                    const minuti = datum.getMinutes().toString().padStart(2, '0');
+                    const sekunde = datum.getSeconds().toString().padStart(2, '0');
+                    return `${sati}:${minuti}:${sekunde}`;
+                },
+                pretrazi(){
+                    if (!this.pretraga.trim()) {
+                        this.dostupni_proizvodi = this.proizvodi;
+                    } else{
+                        const kljucneReci = this.pretraga.toLowerCase().split(" ");
+                        this.dostupni_proizvodi = this.proizvodi.filter((proizvod) => {
+                            const svePretrage = (
+                                proizvod.naziv + " " +
+                                proizvod.opis + " " +
+                                proizvod.sifra + " " +
+                                proizvod["brend.naziv"] + " " +
+                                proizvod["pol.naziv"] + " " +
+                                proizvod["kategorija.naziv"] + " " +
+                                proizvod.cena
+                            ).toLowerCase();
+                            return kljucneReci.every((rec) => svePretrage.includes(rec));
+                        });
+                    }
+                },
+                ponistiPretragu(){
+                    this.dostupni_proizvodi = this.proizvodi;
+                    this.pretraga="";
+                },
+                minimizujKorpu() {
+                    this.korpaMinimizovana = !this.korpaMinimizovana;
+                },
+                prikaziKorpu() {
+                    if(this.korpa.length === 0){
+                        alert("Korpa je prazna!")
+                    }else{
+                        this.korpaMinimizovana = false;
+                    }
+                },
+                filtrirajProizvode() {
+                    this.dostupni_proizvodi = this.proizvodi.filter((proizvod) => {
+                        const uslovi = [];
+                        if (this.izabranaKategorija) {
+                            uslovi.push(proizvod["kategorija.naziv"] === this.izabranaKategorija);
+                        }
+                        if (this.izabraniBrend) {
+                            uslovi.push(proizvod["brend.naziv"] === this.izabraniBrend);
+                        }
+                        if (this.izabraniPol) {
+                            uslovi.push(proizvod["pol.naziv"] === this.izabraniPol);
+                        }
+                        return uslovi.every((uslov) => uslov);
+                    });
+                },
+                resetujFiltere(){
+                    this.izabranaKategorija = "";
+                    this.izabraniBrend = "";
+                    this.izabraniPol = "";
+
+                    this.filtrirajProizvode();
+                },
+                prikaziFiltere() {
+                    this.filteriVidljivi = !this.filteriVidljivi;  
+                }     
+            }
+        }).mount('#app')
+    </script>
+
+</body>
+</html>

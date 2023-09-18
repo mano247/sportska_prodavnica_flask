@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moje kupovine</title>
+    <link rel="stylesheet" href="styles/kupovine.css">
+</head>
+<body>
+    <div>
+        <header>
+            <h1 class="centriranje_naslova">Prodavnica sportske opreme</h1>
+            <nav>
+                <a href="/logout">Odjavi se</a>
+                <a href="/">Pocetna stranica</a>
+            </nav>
+        </header>
+    </div>
+    <h3 class="centriranje_naslova">Moje kupovine</h3>
+    <table class="centriranje_tabele">
+            <thead>
+                <tr>
+                    <th>Kupac</th>
+                    <th>Proizvod</th>
+                    <th>Kolicina</th>
+                    <th>Cena</th>
+                    <th>Vreme - Datum</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if sve_kupovine %}
+                    {% for kupovina in sve_kupovine %}
+                        <tr>
+                            <td>{{ kupovina.ime}} {{kupovina.prezime }}</td>
+                            <td>{{ kupovina.naziv }}</td>
+                            <td>{{ kupovina.kolicina }}</td>
+                            <td>{{ kupovina.cena }}</td>
+                            <td>{{ kupovina.vreme }} - {{kupovina.datum}}</td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr class="prazan_red">
+                        <td colspan="5">Nemate ostvarenih kupovina</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+    </table>
+    
+</body>
+</html>

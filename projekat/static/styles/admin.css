@@ -1,0 +1,94 @@
+body{
+    background: rgb(83, 58, 58);
+    font-family: fantasy;
+}
+h1, h4 {
+    background-color: rgb(163, 132, 79);
+    margin: 0;
+    padding: 0;
+    text-decoration: underline;
+}
+nav {
+    background-color: gray;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+nav a {
+    float: right;
+    color: blue;
+    padding: 15px 15px;
+}
+table{
+    background-color: gray;
+    border-collapse: collapse;
+}
+th, td{
+    border: 1px solid black;
+}
+.centriranje_tabele {
+    margin: 0 auto;
+}
+.centriranje_naslova {
+    text-align: center;
+}
+.centriranje_dugmeta {
+    margin-right: 5px;
+    margin-top: 10px;
+    text-align: center;
+}
+.centriranje_forme{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: gray;
+    margin-left: 450px;
+    margin-right: 450px;
+    margin-top: 10px;
+}
+.forma_red {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+    margin-top: 5px;
+}
+.forma_red label {
+    width: 120px;
+    margin-right: 10px;
+}
+.forma_red button{
+    margin-right: 10px;
+}
+.select_polje {
+    width: 95%;
+}
+.forma_dugme{
+    margin-left: 15px;
+    margin-top: 5px;
+}
+.logicki_obrisan_red {
+    background-color: blueviolet;
+}
+.select_polje_kupovina {
+    width: 75%;
+}
+button {
+    background-color: #007bff;
+    color: #fff;
+}
+nav .sesija_korisnik {
+    float: left;
+    color: rgb(255, 145, 0);
+    padding: 15px 15px;
+    font-size: 20px;
+    text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+}
+.a_pocetna {
+    float: left;
+    color: blue;
+    padding: 15px 15px;
+}
+.admin_red {
+    background-color: rgb(2, 59, 2);
+    color: wheat;
+}

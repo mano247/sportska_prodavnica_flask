@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prijava</title>
+    <link rel="stylesheet" href="styles/login.css">
+</head>
+<body>
+    <div>
+        <form action="/login" method="post">
+            <h3>Prijavi se</h3>
+            <div>
+                <label for="korisnickoIme">Korisnicko ime: <input  type="text" placeholder="username" name="korisnickoIme" required></label>
+            </div>
+            <div>
+                <label for="lozinka">Lozinka: <input  type="password" placeholder="password" name="lozinka" required></label>
+            </div>
+            <div>
+                <button type="submit" >Prijavi se</button>
+                <p>
+                    <a href="/registracija" class="a_registruj_se">Registuj se</a>
+                    <a href="/">Odustani</a>
+                </p>
+            </div>
+        </form>
+        {% if error_message %}
+            <p class="error_message">{{ error_message }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>

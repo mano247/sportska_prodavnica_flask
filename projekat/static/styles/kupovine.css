@@ -1,0 +1,54 @@
+body{
+    background-color: rgb(83, 58, 58);
+    font-family: fantasy;
+}
+header {
+    position: fixed; 
+    top: 0;  
+    z-index: 100; 
+    width: 99.2%;
+}
+h1, h4 {
+    background-color: rgb(163, 132, 79);
+    margin: 0;
+    padding: 0;
+    text-decoration: underline;
+}
+h3{
+    color: rgb(185, 169, 150);
+    text-decoration: underline;
+}
+nav {
+    background-color: gray;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+nav a, label {
+    float: right;
+    color: blue;
+    padding: 15px 15px;
+}
+.centriranje_naslova {
+    text-align: center;
+}
+table{
+    background-color: gray;
+    border-collapse: collapse;
+}
+th, td{
+    border: 1px solid black;
+}
+.centriranje_tabele {
+    margin: 0 auto;
+}
+.centriranje_naslova {
+    text-align: center;
+}
+div{
+    margin-bottom: 170px;
+}
+.prazan_red {
+    background-color: brown;
+    color: antiquewhite;
+}

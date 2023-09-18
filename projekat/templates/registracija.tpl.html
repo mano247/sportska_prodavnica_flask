@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registracija</title>
+    <link rel="stylesheet" href="styles/login.css">
+    <script src="scripts/axios.min.js"></script>
+    <script src="scripts/vue.global.js"></script>
+</head>
+<body>
+    <div id="app">
+        <form @submit.prevent="registrujKupca()">
+            <h3>Registruj se</h3>
+            <div>
+                <label for="ime">Ime: <input v-model="noviKupac.ime" type="text" placeholder="Ime" required></label>
+            </div>
+            <div>
+                <label for="prezime">Prezime: <input v-model="noviKupac.prezime" type="text" placeholder="Prezime" required></label>
+            </div>
+            <div>
+                <label for="email">Email: <input v-model="noviKupac.email" type="text" placeholder="E-mail" required></label>
+            </div>
+            <div>
+                <label for="adresa">Adresa: <input v-model="noviKupac.adresa" type="text" placeholder="Adresa-Grad" required></label>
+            </div>
+            <div>
+                <label for="brojTelefona">Broj telefona: <input v-model="noviKupac.brojTelefona" type="text" placeholder="Broj telefona" required></label>
+            </div>
+            <div>
+                <label for="korisnickoIme">Korisnicko ime: <input v-model="noviKupac.korisnickoIme" type="text" placeholder="username" required></label>
+            </div>
+            <div>
+                <label for="lozinka">Lozinka: <input v-model="noviKupac.lozinka" type="password" placeholder="password" required></label>
+            </div>
+            <div>
+                <button type="submit">Registruj se</button>
+                <p>
+                    <a href="/login" class="a_registruj_se">Prijavi se</a>
+                    <a href="/">Odustani</a>
+                </p>
+            </div>
+        </form>
+    </div>
+    <script>
+        Vue.createApp({
+            data(){
+                return {
+                    noviKupac: {
+                        ime: undefined,
+                        prezime: undefined,
+                        email: undefined,
+                        adresa: undefined,
+                        brojTelefona: undefined,
+                        korisnickoIme: undefined,
+                        lozinka: undefined,
+                        pravo_pristupa_id: 2
+                    }
+                }
+            },
+            methods: {
+                async registrujKupca(event){
+                    let kupac = { ...this.noviKupac };
+                    try{
+                        const response = await axios.post("/api/korisnici", kupac);
+                        if (response.status == 201){
+                            alert("Registracija je uspesna!");
+                            window.location.href="/";
+                        }else {
+                            alert("Registracija neuspesna! Pokusajte ponovo.")
+                        } 
+                    } catch (error) {
+                        alert("Greska prilikom registracije!")
+                    }
+                    this.noviKupac = {
+                        ime: "",
+                        prezime: "",
+                        email: "",
+                        adresa: "",
+                        brojTelefona: "",
+                        korisnickoIme: "",
+                        lozinka: "",
+                        pravo_pristupa_id: 2
+                    };
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>

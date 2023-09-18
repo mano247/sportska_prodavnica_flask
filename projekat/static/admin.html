@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prodavnica</title>
+    <script src="scripts/axios.min.js"></script>
+    <script src="scripts/vue.global.js"></script>
+    <link rel="stylesheet" href="styles/admin.css">
+</head>
+<body>
+    <div id="app">
+        <div v-if="korisnik.pravo === 'admin'">
+            <header>
+                <h1 class="centriranje_naslova">Prodavnica sportske opreme</h1>
+                <h4 class="centriranje_naslova">Stranica za administratore</h4>
+                <nav>
+                    <a href="/logout">Odjavi se</a>
+                
+                    <div v-if="korisnik.ime" class="sesija_korisnik">
+                        <span>{{ korisnik.ime }} {{ korisnik.prezime }} - {{korisnik.pravo}}</span>
+                    </div>
+                    <a href="/">Pocetna (korisnicka) stranica</a>
+                </nav>
+            </header>
+
+            <h2 class="centriranje_naslova">Proizvodi</h2>
+            <table class="centriranje_tabele">
+                <thead>
+                    <tr>
+                        <th>Sifra</th>
+                        <th>Naziv</th>
+                        <th>Brend</th>
+                        <th>Pol</th>
+                        <th>Kategorija</th>
+                        <th>Opis</th>
+                        <th>Cena</th>
+                        <th>Dostupno</th>
+                        <th>Opcije</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="(proizvod, indeks) in proizvodi" :class="{ 'logicki_obrisan_red': proizvod.dostupnost === 0 }">
+                        <td>{{proizvod.sifra}}</td>
+                        <td>{{proizvod.naziv}}</td>
+                        <td>{{proizvod["brend.naziv"]}}</td>
+                        <td>{{proizvod["pol.naziv"]}}</td>
+                        <td>{{proizvod["kategorija.naziv"]}}</td>
+                        <td>{{proizvod.opis}}</td>
+                        <td>{{proizvod.cena}}</td>
+                        <td>{{proizvod.dostupnost}}</td>
+                        <td>
+                            <button @click="odaberiProizvod(indeks, proizvod), prikaziFormuIzmeneProizvoda()">Izmeni</button>
+                            <button @click="ukloniProizvod(proizvod.id)">Ukloni</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="centriranje_dugmeta" v-show="!showFormDodajProizvod && !showFormIzmenaProizvoda">
+                <button @click="prikaziFormuDodavanjaProizvoda()">
+                    Dodaj proizvod
+                </button>
+            </div>
+
+            <div class="centriranje_forme" v-show="showFormDodajProizvod">
+                <form @submit.prevent="dodajProizvod()">
+                    <h2 class="centriranje_naslova">Dodavanje proizvoda</h2>
+                    <div class="forma_red">
+                        <label for="sifra">Sifra: <input v-model="noviProizvod.sifra" type="text" name="sifra" required></label>
+                    </div>
+                    <div class="forma_red">
+                        <label for="naziv">Naziv: <input v-model="noviProizvod.naziv" type="text" name="naziv" required></label>
+                    </div>
+                    <div>
+                        <label for="brend_id">Brend:</label>
+                        <br>
+                        <select v-model="noviProizvod.brend_id" class="select_polje" name="brend_id" required>
+                            <option v-for="b in brendovi" :value="b.id">{{b.naziv}}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="pol_id">Pol:</label>
+                        <br>
+                        <select v-model="noviProizvod.pol_id" class="select_polje" name="pol_id" required>
+                            <option v-for="po in polovi" :value="po.id">{{po.naziv}}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="kategorija_id">Kategorija:</label>
+                        <br>
+                        <select v-model="noviProizvod.kategorija_id" class="select_polje" name="kategorija_id" required>
+                            <option v-for="ca in kategorije" :value="ca.id">{{ca.naziv}}</option>
+                        </select>
+                    </div>
+                    <div class="forma_red">
+                        <label for="opis">Opis: <input v-model="noviProizvod.opis" type="text" name="opis"></label>
+                    </div>
+                    <div class="forma_red">
+                        <label for="cena">Cena: <input v-model="noviProizvod.cena" type="number" step="1" name="cena" required></label>
+                    </div>
+                    <div class="forma_red">
+                        <button class="forma_dugme" type="submit">Dodaj</button>
+                        <button class="forma_dugme" type="button" @click="odustaniOdFormeDodavanjaProizvoda()" >Odustani</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="centriranje_forme" v-show="showFormIzmenaProizvoda">
+                <form @submit.prevent="izmeniProizvod()">
+                    <h2 class="centriranje_naslova">Izmena proizvoda</h2>
+                    <div class="forma_red">
+                        <label for="sifra">Sifra: <input v-model="proizvodZaIzmenu.sifra" type="text" name="sifra" required></label>
+                    </div>
+                    <div class="forma_red">
+                        <label for="naziv">Naziv: <input v-model="proizvodZaIzmenu.naziv" type="text" name="naziv" required></label>
+                    </div>
+                    <div>
+                        <label for="brend_id">Brend:</label>
+                        <br>
+                        <select v-model="proizvodZaIzmenu.brend_id" class="select_polje" name="brend_id" required>
+                            <option v-for="b in brendovi" :value="b.id">{{b.naziv}}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="pol_id">Pol:</label>
+                        <br>
+                        <select v-model="proizvodZaIzmenu.pol_id" class="select_polje" name="pol_id" required>
+                            <option v-for="po in polovi" :value="po.id">{{po.naziv}}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="kategorija_id">Kategorija:</label>
+                        <br>
+                        <select v-model="proizvodZaIzmenu.kategorija_id" class="select_polje" name="kategorija_id" required>
+                            <option v-for="ca in kategorije" :value="ca.id">{{ca.naziv}}</option>
+                        </select>
+                    </div>
+                    <div class="forma_red">
+                        <label for="opis">Opis: <input v-model="proizvodZaIzmenu.opis" type="text" name="opis"></label>
+                    </div>
+                    <div class="forma_red">
+                        <label for="cena">Cena: <input v-model="proizvodZaIzmenu.cena" type="number" step="1" name="cena" required></label>
+                    </div>
+                    <div class="forma_red">
+                        <label for="dostupnost">Dostupnost: <input v-model="proizvodZaIzmenu.dostupnost" type="number" step="1" min="0" max="1" name="dostupnost"></label>
+                    </div>
+                    <div class="forma_red">
+                        <button class="forma_dugme" type="submit">Izmeni</button>
+                        <button class="forma_dugme" @click="odustaniOdFormeIzmeneProizvoda()">Odustani</button>
+                    </div>
+                </form>
+            </div>
+
+            <hr>
+
+            <h2 class="centriranje_naslova">Korisnici</h2>
+            <table class="centriranje_tabele">
+                <thead>
+                    <tr>
+                        <th>Tip korisnika</th>
+                        <th>Ime</th>
+                        <th>Prezime</th>
+                        <th>Email</th>
+                        <th>Adresa</th>
+                        <th>Broj telefona</th>
+                        <th>Korisnicko ime</th>
+                        <th>Lozinka</th>
+                        <th>Opcije</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="(korisnik, indeks) in korisnici" v-bind:class="{ 'admin_red': korisnik.naziv === 'admin' }">
+                        <td>{{korisnik.naziv}}</td>
+                        <td>{{korisnik.ime}}</td>
+                        <td>{{korisnik.prezime}}</td>
+                        <td>{{korisnik.email}}</td>
+                        <td>{{korisnik.adresa}}</td>
+                        <td>{{korisnik.brojTelefona}}</td>
+                        <td>{{korisnik.korisnickoIme}}</td>
+                        <td>{{korisnik.lozinka}}</td>
+                        <td>
+                            <button @click="odaberiKorisnika(indeks, korisnik), prikaziFormuIzmeneKorisnika()">Izmeni</button>
+                            <button @click="ukloniKorisnika(korisnik.id)">Ukloni</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="centriranje_dugmeta" v-show="!showFormDodajKorisnika && !showFormIzmenaKorisnika">
+                <button @click="prikaziFormuDodavanjaKorisnika()">
+                    Dodaj korisnika
+                </button>
+            </div>
+
+            <div class="centriranje_forme" v-show="showFormDodajKorisnika">
+                <form @submit.prevent="dodajKorisnika()">
+                    <h3>Dodavanje korisnika</h3>
+                        <div class="forma_red">
+                            <label for="ime">Ime: <input v-model="noviKorisnik.ime" type="text" name="ime" required></label>
+                        </div>
+                        <div class="forma_red">
+                            <label for="prezime">Prezime: <input v-model="noviKorisnik.prezime" type="text" name="prezime" required></label>
+                        </div>
+                        <div class="forma_red">
+                            <label for="email">Email: <input v-model="noviKorisnik.email" type="text" required></label>
+                        </div>
+                        <div class="forma_red">
+                            <label for="adresa">Adresa: <input v-model="noviKorisnik.adresa" type="text" name="adresa" required></label>
+                        </div>
+                        <div class="forma_red">
+                            <label for="brojTelefona">Broj telefona: <input v-model="noviKorisnik.brojTelefona" type="text" name="brojTelefona" required></label>
+                        </div>
+                        <div class="forma_red">
+                            <label for="korisnickoIme">Korisnicko ime: <input v-model="noviKorisnik.korisnickoIme" type="text" name="korisnickoIme" required></label>
+                        </div>
+                        <div class="forma_red">
+                            <label for="lozinka">Lozinka: <input v-model="noviKorisnik.lozinka" type="password" name="lozinka" required></label>
+                        </div>
+                        <div>
+                            <label for="pravo_pristupa_id">Tip: </label>
+                            <br>
+                            <select class="select_polje" v-model="noviKorisnik.pravo_pristupa_id" name="pravo_pristupa_id" required>
+                                <option v-for="p in prava" :value="p.id">{{p.naziv}}</option>
+                            </select>
+                            
+                        </div>
+                        <div class="forma_red">
+                            <button class="forma_dugme" type="submit">Dodaj</button>
+                            <button class="forma_dugme" @click="odustaniOdFormeDodavanjaKorisnika()">Odustani</button>
+                        </div>
+                </form>
+            </div>
+
+            <div class="centriranje_forme" v-show="showFormIzmenaKorisnika">
+                <form @submit.prevent="izmeniKorisnika()">
+                    <h3>Izmena korisnika</h3>
+                        <div class="forma_red">
+                            <label for="ime">Ime: <input v-model="korisnikZaIzmenu.ime" type="text" name="ime" required></label>
+                        </div>
+                        <div class="forma_red">
+                            <label for="prezime">Prezime: <input v-model="korisnikZaIzmenu.prezime" type="text" name="prezime" required></label>
+                        </div>
+                        <div class="forma_red">
+                            <label for="email">Email: <input v-model="korisnikZaIzmenu.email" type="text" required></label>
+                        </div>
+                        <div class="forma_red">
+                            <label for="adresa">Adresa: <input v-model="korisnikZaIzmenu.adresa" type="text" name="adresa" required></label>
+                        </div>
+                        <div class="forma_red">
+                            <label for="brojTelefona">Broj telefona: <input v-model="korisnikZaIzmenu.brojTelefona" type="text" name="brojTelefona" required></label>
+                        </div>
+                        <div class="forma_red">
+                            <label for="korisnickoIme">Korisnicko ime: <input v-model="korisnikZaIzmenu.korisnickoIme" type="text" name="korisnickoIme" required></label>
+                        </div>
+                        <div class="forma_red">
+                            <label for="lozinka">Lozinka: <input v-model="korisnikZaIzmenu.lozinka" type="password" name="lozinka" required></label>
+                        </div>
+                        <div class="forma_red">
+                            <button class="forma_dugme" type="submit">Izmeni</button>
+                            <button class="forma_dugme" type="button" @click="odustaniOdFormeIzmeneKorisnika()">Odustani</button>
+                        </div>
+                </form>
+            </div>
+
+            <hr>
+
+            <h2 class="centriranje_naslova">Kupovine</h2>
+            <table class="centriranje_tabele">
+                <thead>
+                    <tr>
+                        <th>Kupac</th>
+                        <th>Proizvod</th>
+                        <th>Cena</th>
+                        <th>Datum</th>
+                        <th>Vreme</th>
+                        <th>Kolicina</th>
+                        <th>Opcije</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="(kupovina, indeks) in kupovine">
+                        <td>{{kupovina.ime + " " + kupovina.prezime}}</td>
+                        <td>{{kupovina.sifra + " " + kupovina.naziv}}</td>
+                        <td>{{kupovina.cena}}</td>
+                        <td>{{kupovina.datum}}</td>
+                        <td>{{kupovina.vreme}}</td>
+                        <td>{{kupovina.kolicina}}</td>
+                        <td>
+                            <button @click="odaberiKupovinu(indeks, kupovina), prikaziFormuIzmeneKupovine()">
+                                Izmeni
+                            </button>
+                            <button @click="ukloniKupovinu(kupovina.id)">
+                                Ukloni
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="centriranje_dugmeta" v-show="!showFormDodajKupovinu && !showFormIzmenaKupovine">
+                <button @click="prikaziFormuDodavanjaKupovine()">
+                    Dodaj kupovinu
+                </button>
+            </div>
+
+            <div class="centriranje_forme" v-show="showFormDodajKupovinu">
+                <form @submit.prevent="dodajKupovinu()">
+                    <h2 class="centriranje_naslova">Dodavanje kupovine</h2>
+                    <div>
+                        <label for="korisnik_id">Korisnik:</label>
+                        <br>
+                        <select v-model="novaKupovina.korisnik_id" class="select_polje_kupovina" name="korisnik_id" required>
+                            <option v-for="kor in korisnici" :value="kor.id">{{kor.ime + " " + kor.prezime}}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="proizvod_id">Proizvod:</label>
+                        <br>
+                        <select v-model="novaKupovina.proizvod_id" class="select_polje_kupovina" name="proizvod_id" required>
+                            <option v-for="pro in dostupniProizvodi" :value="pro.id">{{pro.sifra + " " + pro.naziv}}</option>
+                        </select>
+                    </div>
+                    <div class="forma_red">
+                        <label for="cena">Cena: <input v-model="novaKupovina.cena" type="number" name="cena" step="1" required></label>
+                    </div>
+                    <div class="forma_red">
+                        <label for="datum">Datum:<input v-model="novaKupovina.datum" type="text" name="datum" placeholder="DD-MM-YYYY" pattern="^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$" required></label>
+                    </div>
+                    <div class="forma_red">
+                        <label for="vreme">Vreme:<input v-model="novaKupovina.vreme" type="text" name="vreme" pattern="^(0[0-9]|1[0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" placeholder="HH:MM:SS"  required></label>
+                    </div>
+                    <div class="forma_red">
+                        <label for="kolicina">Kolicina: <input v-model="novaKupovina.kolicina" type="number" step="1" required></label>
+                    </div>
+                    <div class="forma_red">
+                        <button class="forma_dugme" type="submit">Dodaj</button>
+                        <button class="forma_dugme" type="button" @click="odustaniodFormeDodavanjaKupovine()">Odustani</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="centriranje_forme" v-show="showFormIzmenaKupovine">
+                <form @submit.prevent="izmeniKupovinu()">
+                    <h2 class="centriranje_naslova">Izmena kupovine</h2>
+                    <div>
+                        <label for="korisnik_id">Korisnik:</label>
+                        <br>
+                        <select v-model="kupovinaZaIzmenu.korisnik_id" class="select_polje_kupovina" name="korisnik_id" required>
+                            <option v-for="kor in korisnici" :value="kor.id">{{kor.ime + " " + kor.prezime}}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="proizvod_id">Proizvod:</label>
+                        <br>
+                        <select v-model="kupovinaZaIzmenu.proizvod_id" class="select_polje_kupovina" name="proizvod_id" required>
+                            <option v-for="pro in dostupniProizvodi" :value="pro.id">{{pro.sifra + " " + pro.naziv}}</option>
+                        </select>
+                    </div>
+                    <div class="forma_red">
+                        <label for="cena">Cena: <input v-model="kupovinaZaIzmenu.cena" type="number" name="cena" step="1" required></label>
+                    </div>
+                    <div class="forma_red">
+                        <label for="datum">Datum:<input v-model="kupovinaZaIzmenu.datum" type="text" pattern="^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$" name="datum" placeholder="DD-MM-YYYY" required></label>
+                    </div>
+                    <div class="forma_red">
+                        <label for="vreme">Vreme:<input v-model="kupovinaZaIzmenu.vreme" type="text" pattern="^(0[0-9]|1[0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" name="vreme" placeholder="HH:MM:SS"  required></label>
+                    </div>
+                    <div class="forma_red">
+                        <label for="kolicina">Kolicina: <input v-model="kupovinaZaIzmenu.kolicina" type="number" step="1" required></label>
+                    </div>
+                    <div class="forma_red">
+                        <button class="forma_dugme" type="submit">Izmeni</button>
+                        <button class="forma_dugme" type="button" @click="odustaniodFormeIzmeneKupovine()">Odustani</button>
+                    </div>
+                </form>
+            </div>
+            <hr>
+        </div>
+        <div v-else>
+            <p>Stranica nedostupna!</p>
+            <a href="/">Povratak na pocetnu</a>
+        </div>
+    </div>
+    <script>
+        Vue.createApp({
+            data(){
+                return {
+
+                    noviProizvod: {
+                        sifra: undefined,
+                        naziv: undefined,
+                        brend_id: undefined,
+                        pol_id: undefined,
+                        kategorija_id: undefined,
+                        opis: undefined,
+                        cena: undefined,
+                        dostupnost: 1
+                    },
+                    proizvodZaIzmenu: {
+                        sifra: undefined,
+                        naziv: undefined,
+                        brend_id: undefined,
+                        pol_id: undefined,
+                        kategorija_id: undefined,
+                        opis: undefined,
+                        cena: undefined,
+                        dostupnost: undefined
+                    },
+                    proizvodi: [],
+                    noviKorisnik: {
+                        ime: undefined,
+                        prezime: undefined,
+                        email: undefined,
+                        adresa: undefined,
+                        brojTelefona: undefined,
+                        korisnickoime: undefined,
+                        lozinka: undefined,
+                        pravo_pristupa_id: undefined
+                    },
+                    korisnikZaIzmenu: {
+                        ime: undefined,
+                        prezime: undefined,
+                        email: undefined,
+                        adresa: undefined,
+                        brojTelefona: undefined,
+                        korisnickoime: undefined,
+                        lozinka: undefined
+                    },
+                    korisnici: [],
+                    novaKupovina: {
+                        korisnik_id: undefined,
+                        proizvod_id: undefined,
+                        cena: undefined,
+                        datum: undefined,
+                        vreme: undefined,
+                        kolicina: undefined
+                    },
+                    kupovinaZaIzmenu: {
+                        korisnik_id: undefined,
+                        proizvod_id: undefined,
+                        cena: undefined,
+                        datum: undefined,
+                        vreme: undefined,
+                        kolicina: undefined
+                    },
+                    kupovine: [],
+                    prava: [],
+                    polovi: [],
+                    kategorije: [],
+                    brendovi: [],
+                    showFormDodajKorisnika: false,
+                    showFormIzmenaKorisnika: false,
+                    showFormDodajProizvod: false,
+                    showFormIzmenaProizvoda: false,
+                    showFormDodajKupovinu: false,
+                    showFormIzmenaKupovine: false,
+                    dostupniProizvodi: [],
+                    korisnik: {},
+                }
+            },
+            created(){
+                axios.get("/api/proizvodi").then(podaci => {
+                    this.proizvodi = podaci.data
+                });
+                axios.get("/api/korisnici").then(podaci => {
+                    this.korisnici = podaci.data
+                });
+                axios.get("/api/kupovine").then(podaci => {
+                    this.kupovine = podaci.data
+                });
+                axios.get("/api/prava").then(podaci => {
+                    this.prava = podaci.data
+                });
+                axios.get("/api/polovi").then(podaci => {
+                    this.polovi = podaci.data
+                });
+                axios.get("/api/kategorije").then(podaci => {
+                    this.kategorije = podaci.data
+                });
+                axios.get("/api/brendovi").then(podaci => {
+                    this.brendovi = podaci.data
+                });
+                axios.get("/api/dostupni_proizvodi").then(podaci => {
+                    this.dostupniProizvodi = podaci.data
+                });
+                axios.get("/api/session_podaci").then(podaci => {
+                    this.korisnik = podaci.data;
+                })
+            },
+            methods: {
+                dodajProizvod(event){ 
+                    let proizvod = {...this.noviProizvod};
+                    axios.post("api/proizvodi", proizvod).then(podaci => {
+                        axios.get("/api/proizvodi").then(podaci => {
+                            this.proizvodi = podaci.data
+                        })
+                    })
+                    this.noviProizvod = {
+                        sifra: "",
+                        naziv: "",
+                        brend_id: "",
+                        pol_id: "",
+                        kategorija_id: "",
+                        opis: "",
+                        cena: "",
+                        dostupnost: 1
+                    }
+                    this.showFormDodajProizvod = false;
+                },
+                prikaziFormuDodavanjaProizvoda(){
+                    this.showFormDodajProizvod = true;
+                    this.showFormIzmenaProizvoda = false;
+                },
+                prikaziFormuIzmeneProizvoda(){
+                    this.showFormIzmenaProizvoda = true;
+                    this.showFormDodajProizvod = false;
+                },
+                odustaniOdFormeDodavanjaProizvoda(){
+                    this.showFormDodajProizvod = false;
+                },
+                odustaniOdFormeIzmeneProizvoda(){
+                    this.showFormIzmenaProizvoda = false;
+                },
+                ukloniProizvod(indeks){
+                    axios.put(`/api/proizvod/${indeks}`).then(podaci => {
+                        axios.get("/api/proizvodi").then(podaci => {
+                            this.proizvodi = podaci.data
+                            location.reload()
+                        })
+                    })
+                },
+                odaberiProizvod(indeks, proizvod){
+                    this.proizvodZaIzmenu = {...proizvod};
+                    this.proizvodZaIzmenu["indeks"] = indeks;
+                },
+                izmeniProizvod(event){
+                    let proizvod = { ...this.proizvodZaIzmenu};
+                    axios.put(`/api/proizvodi/${proizvod["id"]}`, proizvod).then(podaci => {
+                        axios.get("/api/proizvodi").then(podaci => {
+                            this.proizvodi = podaci.data
+                        })
+                    })
+                    this.showFormIzmenaProizvoda = false;
+                    location.reload();
+                },
+                dodajKorisnika(event){ 
+                    let korisnik = {...this.noviKorisnik};
+                    axios.post("/api/korisnici", korisnik).then(podaci => {
+                        axios.get("/api/korisnici").then(podaci => {
+                            this.korisnici = podaci.data
+                        })
+                    })
+                    this.noviKorisnik = {
+                        ime: "",
+                        prezime: "",
+                        email: "",
+                        adresa: "",
+                        brojTelefona: "",
+                        korisnickoIme: "",
+                        lozinka: "",
+                        pravo_pristupa_id: null
+                    };
+                    this.showFormDodajKorisnika = false;
+                },
+                prikaziFormuDodavanjaKorisnika(){
+                    this.showFormDodajKorisnika = true;
+                    this.showFormIzmenaKorisnika = false;
+                },
+                prikaziFormuIzmeneKorisnika(){
+                    this.showFormIzmenaKorisnika = true;
+                    this.showFormDodajKorisnika = false;
+                },
+                odustaniOdFormeDodavanjaKorisnika(){
+                    this.showFormDodajKorisnika = false;
+                },
+                odustaniOdFormeIzmeneKorisnika(){
+                    this.showFormIzmenaKorisnika = false;
+                },
+                ukloniKorisnika(indeks){
+                    axios.delete(`/api/korisnici/${indeks}`).then(podaci => {
+                        axios.get("/api/korisnici").then(podaci => {
+                            this.korisnici = podaci.data
+                            location.reload()
+                        })
+                    })
+                },
+                odaberiKorisnika(indeks, korisnik){
+                    this.korisnikZaIzmenu = {...korisnik};
+                    this.korisnikZaIzmenu["indeks"] = indeks;
+                },
+                izmeniKorisnika(event){
+                    let korisnik = { ...this.korisnikZaIzmenu};
+                    axios.put(`/api/korisnici/${korisnik["id"]}`, korisnik).then(podaci => {
+                        axios.get("/api/korisnici").then(podaci => {
+                            this.korisnici = podaci.data
+                        })
+                    })
+                    this.showFormIzmenaKorisnika = false;
+                },
+                dodajKupovinu(event){ 
+                    let kupovina = {...this.novaKupovina};
+                    axios.post("/api/kupovine", kupovina).then(podaci => {
+                        axios.get("/api/kupovine").then(podaci => {
+                            this.kupovine = podaci.data
+                        })
+                    })
+                    this.novaKupovina = {
+                        korisnik_id: null,
+                        proizvod_id: null,
+                        cena: null,
+                        datum: null,
+                        kolicina: null
+                    };
+                    this.showFormDodajKupovinu = false;
+                },
+                ukloniKupovinu(indeks){
+                    axios.delete(`/api/kupovine/${indeks}`).then(podaci => {
+                        axios.get("/api/kupovine").then(podaci => {
+                            this.kupovine = podaci.data
+                        })
+                    })
+                },
+                odaberiKupovinu(indeks, kupovina){
+                    this.kupovinaZaIzmenu = {...kupovina};
+                    this.kupovinaZaIzmenu["indeks"] = indeks;
+                },
+                izmeniKupovinu(event){
+                    let kupovina = { ...this.kupovinaZaIzmenu};
+                    axios.put(`/api/kupovine/${kupovina["id"]}`, kupovina).then(podaci => {
+                        axios.get("/api/kupovine").then(podaci => {
+                            this.kupovine = podaci.data
+                        })
+                    })
+                    this.showFormIzmenaKupovine = false;
+                },
+                prikaziFormuDodavanjaKupovine(){
+                    this.showFormDodajKupovinu = true;
+                    this.showFormIzmenaKupovine = false;
+                },
+                prikaziFormuIzmeneKupovine(){
+                    this.showFormDodajKupovinu = false;
+                    this.showFormIzmenaKupovine = true;
+                },
+                odustaniodFormeIzmeneKupovine(){
+                    this.showFormIzmenaKupovine = false;
+                },
+                odustaniodFormeDodavanjaKupovine(){
+                    this.showFormDodajKupovinu = false;
+                },
+
+
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>
